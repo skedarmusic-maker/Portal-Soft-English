@@ -10,7 +10,7 @@ const supabase = createClient(
 
 export default async function FinanceiroPage() {
   const cookieStore = await cookies();
-  const studentId = cookieStore.get('portal_student_id')?.value;
+  const studentId = cookieStore.get('portal_student_id')?.value ?? '';
 
   const { data: student } = await supabase
     .from('students')
