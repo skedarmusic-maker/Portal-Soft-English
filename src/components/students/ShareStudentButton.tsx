@@ -11,7 +11,7 @@ interface ShareStudentButtonProps {
 export default function ShareStudentButton({ studentName, accessCode }: ShareStudentButtonProps) {
   const [copied, setCopied] = useState(false);
 
-  const portalUrl = typeof window !== 'undefined' ? `${window.location.origin}/aluno/login` : '';
+  const portalUrl = typeof window !== 'undefined' ? `${window.location.origin}/aluno/login?pin=${accessCode}` : '';
   const shareMessage = `Olá ${studentName}! Aqui está o link do seu Portal do Aluno: ${portalUrl}\n\nSeu código de acesso (PIN) é: *${accessCode}*`;
 
   async function handleShare() {

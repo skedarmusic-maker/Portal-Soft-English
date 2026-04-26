@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Filter, GraduationCap } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import NewStudentButton from '@/components/students/NewStudentButton';
+import ShareStudentButton from '@/components/students/ShareStudentButton';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,7 +22,7 @@ export default async function StudentsPage() {
   const { data: students } = await supabase
     .from('students')
     .select(`
-      id, name, schedule, level, status, notes,
+      id, name, schedule, level, status, notes, access_code,
       attendance_logs(count)
     `)
     .order('name');
@@ -65,13 +66,16 @@ export default async function StudentsPage() {
                   <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${color} flex items-center justify-center text-white font-bold text-xl shadow-lg`}>
                     {initials}
                   </div>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider ${
-                    student.status === 'active'
-                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                      : 'bg-muted text-muted-foreground border border-border'
-                  }`}>
-                    {student.status === 'active' ? 'Ativo' : 'Pausado'}
-                  </span>
+                  <div className="flex gap-2" onClick={(e) => e.preventDefault()}>
+                    <ShareStudentButton studentName={student.name} accessCode={student.access_code} />
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider ${
+                      student.status === 'active'
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : 'bg-muted text-muted-foreground border border-border'
+                    }`}>
+                      {student.status === 'active' ? 'Ativo' : 'Pausado'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="mb-4">
