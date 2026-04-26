@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Portal do Professor | EngSchool',
+  title: 'Portal do Professor | Soft English',
   description: 'Sistema de gestão para escola de idiomas online',
 };
 
@@ -25,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`${geistSans.variable} ${geistMono.variable} antialiased dark`}>
+    <html lang="pt-BR" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} antialiased dark`}>
       <body className="flex h-screen bg-background text-foreground overflow-hidden">
         <Sidebar />
         <div className="flex-1 flex flex-col h-screen overflow-hidden">

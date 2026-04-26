@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import NewStudentModal from './NewStudentModal';
 
-export default function NewStudentButton() {
+export default function NewStudentButton({ existingStudents }: { existingStudents?: any[] }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -17,7 +17,7 @@ export default function NewStudentButton() {
         Novo Aluno
       </button>
 
-      {isOpen && <NewStudentModal onClose={() => setIsOpen(false)} />}
+      {isOpen && <NewStudentModal onClose={() => setIsOpen(false)} existingStudents={existingStudents} />}
     </>
   );
 }

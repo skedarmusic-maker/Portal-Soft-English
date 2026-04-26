@@ -9,6 +9,14 @@ import TeacherHomeworkPanel from '@/components/TeacherHomeworkPanel';
 import TeacherFinancePanel from '@/components/TeacherFinancePanel';
 import { getMaterials } from '@/app/actions/materials';
 
+import NotesButton from '@/components/attendance/NotesButton';
+
+import EditStudentButton from '@/components/students/EditStudentButton';
+import ShareStudentButton from '@/components/students/ShareStudentButton';
+
+import DeleteLessonButton from '@/components/attendance/DeleteLessonButton';
+import { Trash2 } from 'lucide-react';
+
 const statusStyles: Record<string, string> = {
   present: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   absent:  'bg-rose-500/10 text-rose-400 border-rose-500/20',
@@ -39,7 +47,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
 
   if (!student) notFound();
 
-  const [{ data: logs }, materials, { data: homeworks }, { data: payments }] = await Promise.all([
+  const [{ data: logs }, materials, { data: homeworks }, { data: payments }, { data: allStudents }] = await Promise.all([
     supabase
       .from('attendance_logs')
       .select('*')
@@ -55,7 +63,10 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
       .from('payments')
       .select('*')
       .eq('student_id', id)
-      .order('due_date', { ascending: false })
+      .order('due_date', { ascending: false }),
+    supabase
+      .from('students')
+      .select('id, name, schedule, status')
   ]);
 
   const initials = student.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
@@ -95,9 +106,21 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
               <h1 className="text-3xl font-bold text-foreground">{student.name}</h1>
               <p className="text-brand-pink font-medium">Nível: {student.level ?? '—'}</p>
             </div>
-            <button className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-border rounded-lg text-sm font-medium transition-colors">
-              Editar Perfil
-            </button>
+            <div className="flex items-center gap-3">
+              {student.meeting_link && (
+                <a 
+                  href={student.meeting_link} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-brand-purple hover:bg-brand-purple-hover text-white rounded-lg text-sm font-bold transition-all shadow-lg flex items-center gap-2"
+                >
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                  Entrar na Aula
+                </a>
+              )}
+              <ShareStudentButton studentName={student.name} accessCode={student.access_code} />
+              <EditStudentButton student={student} allStudents={allStudents || []} />
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -193,13 +216,17 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
               {(logs ?? []).map((log) => (
                 <tr key={log.id} className="hover:bg-white/5 transition-colors">
                   <td className="py-4 px-4 font-medium text-foreground whitespace-nowrap">
-                    {new Date(log.lesson_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                    <div>{new Date(log.lesson_date + 'T12:00:00').toLocaleDateString('pt-BR')}</div>
+                    {log.lesson_time && <div className="text-[10px] text-brand-pink font-bold">{log.lesson_time}</div>}
                   </td>
                   <td className="py-4 px-4 text-muted-foreground max-w-md">
                     <span className="line-clamp-2">{log.content || <em className="opacity-50">Sem conteúdo</em>}</span>
                     {log.reposicao_date && (
                       <span className="text-xs text-brand-purple block mt-1">↻ Reposição: {log.reposicao_date}</span>
                     )}
+                    <div className="mt-2">
+                      <NotesButton logId={log.id} initialNotes={log.class_notes} />
+                    </div>
                   </td>
                   <td className="py-3 px-4 text-center">
                     {materialsByDate[log.lesson_date]?.length > 0 ? (
@@ -217,19 +244,21 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
                     </span>
                   </td>
                   <td className="py-4 px-4 text-center">
-                    {['holiday', 'justified'].includes(log.status) ? (
-                      reschedulesDone.includes(log.lesson_date) ? (
-                        <span className="text-[10px] uppercase font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">Remarcada</span>
-                      ) : (
-                        <RescheduleButton studentId={id} originalDate={log.lesson_date} />
-                      )
-                    ) : log.is_reposicao ? (
-                      <span className="inline-flex items-center px-2 py-1 rounded text-[10px] uppercase font-bold bg-brand-purple/20 text-brand-purple border border-brand-purple/20">
-                        Reposição
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground/30 text-xs">—</span>
-                    )}
+                    <div className="flex items-center justify-center gap-2">
+                      {['holiday', 'justified'].includes(log.status) ? (
+                        reschedulesDone.includes(log.lesson_date) ? (
+                          <span className="text-[10px] uppercase font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">Remarcada</span>
+                        ) : (
+                          <RescheduleButton studentId={id} originalDate={log.lesson_date} />
+                        )
+                      ) : log.is_reposicao ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded text-[10px] uppercase font-bold bg-brand-purple/20 text-brand-purple border border-brand-purple/20">
+                          Reposição
+                        </span>
+                      ) : null}
+                      
+                      <DeleteLessonButton logId={log.id} studentId={id} />
+                    </div>
                   </td>
                 </tr>
               ))}

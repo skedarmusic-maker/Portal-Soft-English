@@ -20,6 +20,7 @@ export function Sidebar() {
               src="/images/filesooft.png" 
               alt="Soft English Logo" 
               fill
+              sizes="40px"
               className="object-cover"
             />
           </div>

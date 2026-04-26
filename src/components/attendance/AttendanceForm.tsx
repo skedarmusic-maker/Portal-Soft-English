@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react';
 export default function AttendanceForm({ studentId }: { studentId: string }) {
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [lessonTime, setLessonTime] = useState('');
   const [content, setContent] = useState('');
   const [status, setStatus] = useState('present');
 
@@ -17,6 +18,7 @@ export default function AttendanceForm({ studentId }: { studentId: string }) {
     const formData = new FormData();
     formData.append('studentId', studentId);
     formData.append('date', date);
+    formData.append('lesson_time', lessonTime);
     formData.append('content', content);
     formData.append('status', status);
 
@@ -24,7 +26,7 @@ export default function AttendanceForm({ studentId }: { studentId: string }) {
 
     if (result.success) {
       setContent('');
-      // Feedback visual opcional
+      setLessonTime('');
     } else {
       alert(result.error);
     }
@@ -34,12 +36,18 @@ export default function AttendanceForm({ studentId }: { studentId: string }) {
 
   return (
     <tr className="bg-brand-purple/5 hover:bg-brand-purple/10 transition-colors">
-      <td className="py-4 px-4">
+      <td className="py-4 px-4 space-y-2">
         <input
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
           className="bg-transparent border border-brand-purple/30 text-foreground text-sm rounded-md px-2 py-1.5 focus:ring-1 focus:ring-brand-purple focus:outline-none w-full"
+        />
+        <input
+          type="time"
+          value={lessonTime}
+          onChange={(e) => setLessonTime(e.target.value)}
+          className="bg-transparent border border-brand-purple/30 text-foreground text-[10px] rounded-md px-2 py-1 focus:ring-1 focus:ring-brand-purple focus:outline-none w-full"
         />
       </td>
       <td className="py-4 px-4">

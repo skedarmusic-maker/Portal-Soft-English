@@ -33,7 +33,7 @@ export default async function StudentsPage() {
           <h1 className="text-3xl font-bold tracking-tight mb-1">Meus Alunos</h1>
           <p className="text-muted-foreground">Gerencie todos os seus alunos ativos e inativos.</p>
         </div>
-        <NewStudentButton />
+        <NewStudentButton existingStudents={students || []} />
       </div>
 
       <div className="glass p-4 rounded-xl border border-border flex flex-col sm:flex-row gap-4 items-center justify-between">

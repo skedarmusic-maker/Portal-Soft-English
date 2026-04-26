@@ -80,13 +80,24 @@ export default async function AlunoDashboard() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Olá, {student.name.split(' ')[0]}!</h1>
             <p className="text-muted-foreground mt-1">Bem-vindo(a) de volta ao seu portal de estudos.</p>
-            <div className="flex items-center gap-2 mt-3 text-sm font-medium">
+            <div className="flex items-center gap-2 mt-3 text-sm font-medium flex-wrap">
               <span className="bg-white/5 border border-border px-2 py-1 rounded-md text-brand-pink">
                 Nível: {student.level || '—'}
               </span>
               <span className="bg-white/5 border border-border px-2 py-1 rounded-md text-muted-foreground flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" /> {student.schedule || 'Sem horário'}
               </span>
+              {student.meeting_link && (
+                <a 
+                  href={student.meeting_link} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="bg-brand-purple hover:bg-brand-purple-hover text-white border border-brand-purple/50 px-3 py-1 rounded-md flex items-center gap-2 font-bold shadow-lg shadow-brand-purple/20 transition-all ml-auto sm:ml-2"
+                >
+                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                  Entrar na Aula
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -154,6 +165,17 @@ export default async function AlunoDashboard() {
                     <h4 className="font-semibold text-base mb-1 text-foreground">
                       {log.content || <em className="text-muted-foreground/50">Conteúdo não preenchido</em>}
                     </h4>
+
+                    {/* Quadro Branco */}
+                    {log.class_notes && (
+                      <div className="mt-3 mb-4 bg-black/20 border border-brand-purple/20 rounded-xl p-4 shadow-inner relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-brand-purple to-brand-pink" />
+                        <h5 className="text-[10px] uppercase font-bold text-brand-purple tracking-widest mb-2">Quadro Branco / Anotações</h5>
+                        <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed font-medium">
+                          {log.class_notes}
+                        </p>
+                      </div>
+                    )}
                     
                     {/* Lista de Materiais para Download */}
                     {mats.length > 0 && (

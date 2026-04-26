@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { createStudent } from '@/app/actions/student-actions';
-import { X, Loader2, User, Mail, Phone, Target, Lock, DollarSign, Calendar, BookOpen, Hash, AlertCircle } from 'lucide-react';
+import { updateStudent } from '@/app/actions/student-actions';
+import { X, Loader2, User, Mail, Phone, Target, Lock, DollarSign, Calendar, BookOpen, Hash, Power, AlertCircle } from 'lucide-react';
 
 const DAYS = [
   { id: 'seg', label: 'SEG', key: 'Seg' },
@@ -30,15 +30,20 @@ function FieldLabel({ icon: Icon, label }: { icon: React.ElementType; label: str
   );
 }
 
-export default function NewStudentModal({ onClose, existingStudents = [] }: { onClose: () => void, existingStudents?: any[] }) {
+export default function EditStudentModal({ student, onClose, allStudents = [] }: { student: any, onClose: () => void, allStudents?: any[] }) {
   const [loading, setLoading] = useState(false);
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [classTime, setClassTime] = useState('');
+  
+  // Parse schedule string to find selected days and time
+  const initialDays = DAYS.filter(d => student.schedule?.includes(d.key)).map(d => d.id);
+  const initialTime = student.schedule?.split(' ').pop()?.includes(':') ? student.schedule?.split(' ').pop() : '';
+
+  const [selectedDays, setSelectedDays] = useState<string[]>(initialDays);
+  const [classTime, setClassTime] = useState(initialTime || '');
   const [conflicts, setConflicts] = useState<any[]>([]);
 
   function toggleDay(dayId: string) {
-    const newDays = selectedDays.includes(dayId) 
-      ? selectedDays.filter(d => d !== dayId) 
+    const newDays = selectedDays.includes(dayId)
+      ? selectedDays.filter(d => d !== dayId)
       : [...selectedDays, dayId];
     
     setSelectedDays(newDays);
@@ -57,25 +62,22 @@ export default function NewStudentModal({ onClose, existingStudents = [] }: { on
       return;
     }
 
-    const foundConflicts = existingStudents.filter(student => {
-      if (!student.schedule || student.status !== 'active') return false;
+    const foundConflicts = allStudents.filter(s => {
+      // Não comparar com o próprio aluno sendo editado
+      if (s.id === student.id || !s.schedule || s.status !== 'active') return false;
       
-      // Checar se o horário coincide (considerando 1 hora de janela)
-      const studentTime = student.schedule.match(/(\d{2}:\d{2})/)?.[1];
-      if (!studentTime) return false;
+      const sTime = s.schedule.match(/(\d{2}:\d{2})/)?.[1];
+      if (!sTime) return false;
 
-      // Converter para minutos para comparar
       const [h1, m1] = time.split(':').map(Number);
-      const [h2, m2] = studentTime.split(':').map(Number);
+      const [h2, m2] = sTime.split(':').map(Number);
       const t1 = h1 * 60 + m1;
       const t2 = h2 * 60 + m2;
 
-      const timeOverlap = Math.abs(t1 - t2) < 60; // Menos de 60 min de diferença
-      
-      // Checar se algum dos dias selecionados bate com o schedule do aluno
+      const timeOverlap = Math.abs(t1 - t2) < 60;
       const dayOverlap = days.some(dayId => {
         const dayLabel = DAYS.find(d => d.id === dayId)?.key;
-        return dayLabel && student.schedule.includes(dayLabel);
+        return dayLabel && s.schedule.includes(dayLabel);
       });
 
       return timeOverlap && dayOverlap;
@@ -89,10 +91,10 @@ export default function NewStudentModal({ onClose, existingStudents = [] }: { on
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    // Garantir que dias marcados entram corretamente
+    formData.append('id', student.id);
     selectedDays.forEach(d => formData.set(`day_${d}`, 'on'));
 
-    const result = await createStudent(formData);
+    const result = await updateStudent(formData);
 
     if (result.success) {
       onClose();
@@ -106,7 +108,7 @@ export default function NewStudentModal({ onClose, existingStudents = [] }: { on
   const selectCls = `${inputCls} appearance-none`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="glass w-full max-w-2xl rounded-2xl border border-white/15 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
 
         {/* Header */}
@@ -116,8 +118,8 @@ export default function NewStudentModal({ onClose, existingStudents = [] }: { on
               <User className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Cadastrar Novo Aluno</h2>
-              <p className="text-xs text-muted-foreground">Preencha os dados para criar o perfil completo</p>
+              <h2 className="text-lg font-bold">Editar Perfil do Aluno</h2>
+              <p className="text-xs text-muted-foreground">Atualize as informações de {student.name}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-full transition-colors">
@@ -129,6 +131,21 @@ export default function NewStudentModal({ onClose, existingStudents = [] }: { on
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-6">
 
+            {/* Status */}
+            <div className="bg-white/5 p-4 rounded-xl border border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Power className={`w-5 h-5 ${student.status === 'active' ? 'text-emerald-400' : 'text-rose-400'}`} />
+                <div>
+                  <p className="text-sm font-bold">Status do Aluno</p>
+                  <p className="text-xs text-muted-foreground">O aluno está {student.status === 'active' ? 'Ativo' : 'Inativo'}</p>
+                </div>
+              </div>
+              <select name="status" defaultValue={student.status} className="bg-card border border-border text-sm rounded-lg px-3 py-1.5 focus:outline-none">
+                <option value="active">Ativo</option>
+                <option value="inactive">Inativo</option>
+              </select>
+            </div>
+
             {/* ─ Seção 1: Dados Pessoais ─ */}
             <div>
               <h3 className="text-xs font-bold text-brand-pink uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -137,23 +154,23 @@ export default function NewStudentModal({ onClose, existingStudents = [] }: { on
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <FieldLabel icon={User} label="Nome Completo *" />
-                  <input name="name" required placeholder="Ex: Larissa Oliveira" className={inputCls} />
+                  <input name="name" required defaultValue={student.name} placeholder="Ex: Larissa Oliveira" className={inputCls} />
                 </div>
                 <div>
                   <FieldLabel icon={Hash} label="Idade" />
-                  <input name="age" type="number" min={5} max={80} placeholder="Ex: 22" className={inputCls} />
+                  <input name="age" type="number" defaultValue={student.age || ''} min={5} max={80} placeholder="Ex: 22" className={inputCls} />
                 </div>
                 <div>
                   <FieldLabel icon={Phone} label="Telefone / WhatsApp" />
-                  <input name="phone" type="tel" placeholder="Ex: (11) 99999-9999" className={inputCls} />
+                  <input name="phone" type="tel" defaultValue={student.phone || ''} placeholder="Ex: (11) 99999-9999" className={inputCls} />
                 </div>
                 <div className="md:col-span-2">
                   <FieldLabel icon={Mail} label="E-mail" />
-                  <input name="email" type="email" placeholder="Ex: larissa@email.com" className={inputCls} />
+                  <input name="email" type="email" defaultValue={student.email || ''} placeholder="Ex: larissa@email.com" className={inputCls} />
                 </div>
                 <div className="md:col-span-2">
                   <FieldLabel icon={Target} label="Objetivo" />
-                  <textarea name="objective" rows={2} placeholder="Ex: Preparação para viagem aos EUA, inglês para negócios..." className={`${inputCls} resize-none`} />
+                  <textarea name="objective" rows={2} defaultValue={student.objective || ''} placeholder="Ex: Inglês para negócios..." className={`${inputCls} resize-none`} />
                 </div>
               </div>
             </div>
@@ -167,14 +184,13 @@ export default function NewStudentModal({ onClose, existingStudents = [] }: { on
               <div className="space-y-4">
                 <div>
                   <FieldLabel icon={BookOpen} label="Nível do Inglês" />
-                  <select name="level" className={selectCls} defaultValue="B2">
+                  <select name="level" className={selectCls} defaultValue={student.level || 'B2'}>
                     {LEVELS.map(l => (
                       <option key={l.value} value={l.value} className="bg-slate-900">{l.label}</option>
                     ))}
                   </select>
                 </div>
 
-                {/* Seletor de Dias da Semana */}
                 <div>
                   <FieldLabel icon={Calendar} label="Dias da Semana" />
                   <div className="flex gap-2 flex-wrap">
@@ -193,7 +209,6 @@ export default function NewStudentModal({ onClose, existingStudents = [] }: { on
                       </button>
                     ))}
                   </div>
-                  {/* Inputs hidden para os dias */}
                   {DAYS.map(day => (
                     <input
                       key={day.id}
@@ -204,7 +219,6 @@ export default function NewStudentModal({ onClose, existingStudents = [] }: { on
                   ))}
                 </div>
 
-                {/* Horário */}
                 <div>
                   <FieldLabel icon={Calendar} label="Horário da Aula" />
                   <input 
@@ -240,37 +254,34 @@ export default function NewStudentModal({ onClose, existingStudents = [] }: { on
             {/* ─ Seção 3: Financeiro & Acesso ─ */}
             <div>
               <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <span className="w-5 h-px bg-emerald-400 inline-block" /> Financeiro & Acesso ao Portal
+                <span className="w-5 h-px bg-emerald-400 inline-block" /> Financeiro & Acesso
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <FieldLabel icon={DollarSign} label="Mensalidade (R$)" />
-                  <input name="monthly_fee" type="number" step="0.01" min={0} placeholder="Ex: 350.00" className={inputCls} />
+                  <input name="monthly_fee" type="number" step="0.01" min={0} defaultValue={student.monthly_fee || ''} placeholder="Ex: 350.00" className={inputCls} />
                 </div>
                 <div>
                   <FieldLabel icon={Calendar} label="Aulas/Mês" />
-                  <input name="monthly_plan_classes" type="number" min={1} defaultValue={8} className={inputCls} />
+                  <input name="monthly_plan_classes" type="number" min={1} defaultValue={student.monthly_plan_classes || 8} className={inputCls} />
                 </div>
                 <div>
                   <FieldLabel icon={Lock} label="PIN de Acesso ao Portal" />
-                  <input name="access_code" type="text" placeholder="Ex: 1234" maxLength={20} className={inputCls} />
+                  <input name="access_code" type="text" defaultValue={student.access_code || ''} placeholder="Ex: 1234" maxLength={20} className={inputCls} />
                 </div>
                 <div>
                   <FieldLabel icon={User} label="Link Fixo do Meet" />
-                  <input name="meeting_link" type="url" placeholder="https://meet.google.com/xxx-xxxx-xxx" className={inputCls} />
+                  <input name="meeting_link" type="url" defaultValue={student.meeting_link || ''} placeholder="https://meet.google.com/xxx-xxxx-xxx" className={inputCls} />
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground/60 mt-2">O PIN é usado pelo aluno para acessar o portal, e o link do Meet será o atalho para as aulas ao vivo.</p>
             </div>
 
-            {/* ─ Seção 4: Observações ─ */}
             <div>
               <FieldLabel icon={BookOpen} label="Observações Internas" />
-              <textarea name="notes" rows={2} placeholder="Ex: Aluna muito dedicada, foca em pronúncia..." className={`${inputCls} resize-none`} />
+              <textarea name="notes" rows={2} defaultValue={student.notes || ''} placeholder="Ex: Aluna dedicada..." className={`${inputCls} resize-none`} />
             </div>
           </div>
 
-          {/* Footer stick */}
           <div className="px-6 pb-6 flex-shrink-0 border-t border-white/10 pt-4 flex items-center justify-between gap-4">
             <button type="button" onClick={onClose} className="px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-xl transition-colors">
               Cancelar
@@ -281,9 +292,9 @@ export default function NewStudentModal({ onClose, existingStudents = [] }: { on
               className="flex-1 max-w-sm bg-gradient-to-r from-brand-purple to-brand-pink text-white py-2.5 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98]"
             >
               {loading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Cadastrando...</>
+                <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</>
               ) : (
-                <><User className="w-4 h-4" /> Cadastrar Aluno</>
+                <><User className="w-4 h-4" /> Salvar Alterações</>
               )}
             </button>
           </div>

@@ -7,7 +7,10 @@ import {
   ChevronRight, 
   Clock,
   User,
-  Loader2
+  Loader2,
+  CheckCircle2,
+  X,
+  AlertCircle
 } from 'lucide-react';
 import { 
   format, 
@@ -26,6 +29,7 @@ import {
 import { ptBR } from 'date-fns/locale';
 import { createClient } from '@supabase/supabase-js';
 import NewLessonButton from '@/components/attendance/NewLessonButton';
+import NewLessonModal from '@/components/attendance/NewLessonModal';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,44 +39,99 @@ const supabase = createClient(
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
-  const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
+  console.log("RENDER CALENDAR PAGE: ", currentDate);
+  
+  const [modalData, setModalData] = useState<{
+    isOpen: boolean;
+    studentId?: string;
+    date?: string;
+    logId?: string;
+  }>({ isOpen: false });
 
+  const prevMonth = () => setCurrentDate(prev => subMonths(prev, 1));
+  const nextMonth = () => setCurrentDate(prev => addMonths(prev, 1));
+
+  // Derivadas do currentDate - calculadas na renderização
   const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(monthStart);
-  const startDate = startOfWeek(monthStart);
-  const endDate = endOfWeek(monthEnd);
+  const monthEnd   = endOfMonth(monthStart);
+  const startDate  = startOfWeek(monthStart);
+  const endDate    = endOfWeek(monthEnd);
+  const days       = eachDayOfInterval({ start: startDate, end: endDate });
 
-  const days = eachDayOfInterval({ start: startDate, end: endDate });
+  const fetchData = async (start: Date, end: Date) => {
+    setLoading(true);
+    
+    const [{ data: logsData }, { data: studentsData }] = await Promise.all([
+      supabase
+        .from('attendance_logs')
+        .select('id, lesson_date, status, student_id, lesson_time, students(name)')
+        .gte('lesson_date', format(start, 'yyyy-MM-dd'))
+        .lte('lesson_date', format(end, 'yyyy-MM-dd')),
+      supabase
+        .from('students')
+        .select('id, name, schedule')
+        .eq('status', 'active')
+    ]);
+
+    setEvents(logsData || []);
+    setStudents(studentsData || []);
+    setLoading(false);
+  };
 
   useEffect(() => {
-    async function fetchEvents() {
-      setLoading(true);
-      const { data } = await supabase
-        .from('attendance_logs')
-        .select('id, lesson_date, status, students(name)')
-        .gte('lesson_date', format(startDate, 'yyyy-MM-dd'))
-        .lte('lesson_date', format(endDate, 'yyyy-MM-dd'));
-      
-      setEvents(data || []);
-      setLoading(false);
-    }
-    fetchEvents();
+    const ms = startOfMonth(currentDate);
+    const me = endOfMonth(ms);
+    const sd = startOfWeek(ms);
+    const ed = endOfWeek(me);
+    fetchData(sd, ed);
   }, [currentDate]);
+
+  const openLessonModal = (studentId?: string, date?: string, logId?: string) => {
+    setModalData({ isOpen: true, studentId, date, logId });
+  };
+
+  const closeLessonModal = () => {
+    setModalData({ isOpen: false });
+    const ms = startOfMonth(currentDate);
+    const me = endOfMonth(ms);
+    const sd = startOfWeek(ms);
+    const ed = endOfWeek(me);
+    fetchData(sd, ed);
+  };
+
+  // Helper para identificar o dia da semana a partir do texto de horário
+  const getScheduledDays = (schedule: string) => {
+    const days: number[] = [];
+    if (schedule.includes('Seg')) days.push(1);
+    if (schedule.includes('Ter')) days.push(2);
+    if (schedule.includes('Qua')) days.push(3);
+    if (schedule.includes('Qui')) days.push(4);
+    if (schedule.includes('Sex')) days.push(5);
+    if (schedule.includes('Sáb')) days.push(6);
+    return days;
+  };
 
   const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-1">Calendário de Aulas</h1>
-          <p className="text-muted-foreground">Visualize e organize seus horários.</p>
+          <h1 className="text-3xl font-bold text-foreground">Calendário de Aulas</h1>
+          <p className="text-muted-foreground mt-1">Gestão de horários e histórico de frequência</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
           <NewLessonButton />
+          <a 
+            href="/api/auth/google"
+            className="flex items-center gap-2 px-4 py-2 bg-[#4285F4]/10 hover:bg-[#4285F4]/20 border border-[#4285F4]/30 text-[#4285F4] rounded-lg text-sm font-bold transition-all shadow-lg shadow-[#4285F4]/10"
+          >
+            <CalendarIcon className="w-4 h-4" />
+            Conectar Google Agenda
+          </a>
         </div>
       </div>
 
@@ -119,17 +178,72 @@ export default function CalendarPage() {
 
             <div className="grid grid-cols-7 ">
               {days.map((day, i) => {
-                const dayEvents = events.filter(e => isSameDay(parseISO(e.lesson_date), day));
+                const dateKey = format(day, 'yyyy-MM-dd');
+                const dayLogs = events.filter(e => e.lesson_date === dateKey);
+                
+                // Projetar alunos agendados se não houver log (APENAS PARA HOJE OU FUTURO)
+                const isPast = day < new Date(new Date().setHours(0,0,0,0));
+                
+                const scheduledStudents = isPast ? [] : students.filter(s => {
+                  const dayOfWeek = day.getDay();
+                  const studentDays = getScheduledDays(s.schedule || '');
+                  
+                  // Verifica se o dia bate e se ainda não foi registrado log para esse aluno hoje
+                  return studentDays.includes(dayOfWeek) && !dayLogs.some(l => l.student_id === s.id);
+                });
+
                 const currentMonth = isSameMonth(day, monthStart);
                 
                 return (
-                  <div key={i} className={`min-h-[120px] p-3 border-r border-b border-white/5 last:border-r-0 transition-all hover:bg-brand-purple/5 relative group ${!currentMonth ? 'opacity-10' : ''} ${isToday(day) ? 'bg-brand-purple/5' : ''}`}>
+                  <div key={i} className={`min-h-[120px] p-3 border-r border-b border-white/5 last:border-r-0 transition-all hover:bg-brand-purple/5 relative group ${!currentMonth ? 'opacity-20' : ''} ${isToday(day) ? 'bg-brand-purple/5' : ''}`}>
                     <span className={`text-sm font-bold ${isToday(day) ? 'text-brand-pink underline underline-offset-4' : 'text-foreground/80'}`}>{format(day, 'd')}</span>
                     
                     <div className="mt-2 space-y-1 overflow-hidden">
-                      {dayEvents.map((event: any, idx) => (
-                        <div key={idx} className={`rounded px-1.5 py-0.5 text-[10px] truncate border ${event.status === 'absent' ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' : 'bg-brand-purple/20 border-brand-purple/30 text-brand-purple'}`}>
-                          {event.students?.name || 'Aula'}
+                      {/* Logs Reais */}
+                      {dayLogs.map((event: any, idx) => {
+                        let colorClass = '';
+                        let Icon = CheckCircle2;
+                        
+                        if (event.status === 'present') {
+                          colorClass = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400';
+                          Icon = CheckCircle2;
+                        } else if (event.status === 'absent') {
+                          colorClass = 'bg-rose-500/10 border-rose-500/30 text-rose-400';
+                          Icon = X;
+                        } else {
+                          // justified, holiday
+                          colorClass = 'bg-amber-500/10 border-amber-500/30 text-amber-500';
+                          Icon = AlertCircle;
+                        }
+
+                        return (
+                          <div 
+                            key={`log-${idx}`} 
+                            onClick={() => openLessonModal(event.student_id, event.lesson_date, event.id)}
+                            className={`rounded px-1.5 py-1 text-[10px] truncate border cursor-pointer hover:brightness-125 transition-all ${colorClass}`}
+                          >
+                            <div className="flex items-center gap-1">
+                              <Icon className="w-2.5 h-2.5" />
+                              <div className="flex flex-col">
+                                <span>{event.students?.name || 'Aula'}</span>
+                                {event.lesson_time && <span className="opacity-70">{event.lesson_time}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Agendados (Projeção) */}
+                      {scheduledStudents.map((student: any, idx) => (
+                        <div 
+                          key={`sched-${idx}`} 
+                          onClick={() => openLessonModal(student.id, dateKey)}
+                          className="rounded px-1.5 py-1 text-[10px] truncate border border-dashed border-white/20 bg-white/5 text-muted-foreground/60 cursor-pointer hover:bg-white/10 transition-all"
+                        >
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-2.5 h-2.5 opacity-50" />
+                            {student.name}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -140,6 +254,16 @@ export default function CalendarPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Apontamento */}
+      {modalData.isOpen && (
+        <NewLessonModal 
+          onClose={closeLessonModal}
+          preSelectedStudentId={modalData.studentId}
+          preSelectedDate={modalData.date}
+          logId={modalData.logId}
+        />
+      )}
     </div>
   );
 }

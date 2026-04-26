@@ -1,16 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { loginStudent } from '@/app/actions/auth';
 import { Loader2, Lock, UserCheck } from 'lucide-react';
 import Image from 'next/image';
+import { useEffect, Suspense } from 'react';
 
-export default function StudentLogin() {
-  const [pin, setPin] = useState('');
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const [pin, setPin] = useState(searchParams.get('pin') || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+
+  // Se o PIN vier na URL, tenta logar automaticamente ou pelo menos preenche
+  useEffect(() => {
+    const urlPin = searchParams.get('pin');
+    if (urlPin) {
+      setPin(urlPin);
+    }
+  }, [searchParams]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -81,5 +91,13 @@ export default function StudentLogin() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function StudentLogin() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-purple" /></div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
