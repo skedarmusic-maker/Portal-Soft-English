@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import AttendanceForm from '@/components/attendance/AttendanceForm';
 import RescheduleButton from '@/components/attendance/RescheduleButton';
-import MaterialUploadPanel from '@/components/materials/MaterialUploadPanel';
+import SmartMaterialPanel from '@/components/materials/SmartMaterialPanel';
 import TeacherHomeworkPanel from '@/components/TeacherHomeworkPanel';
 import TeacherFinancePanel from '@/components/TeacherFinancePanel';
 import { getMaterials } from '@/app/actions/materials';
@@ -77,13 +77,6 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
 
   const reschedulesDone = (logs ?? []).filter(l => l.is_reposicao).map(l => l.reposicao_date);
   const pendingReschedules = (logs ?? []).filter(l => ['holiday', 'justified'].includes(l.status) && !reschedulesDone.includes(l.lesson_date));
-
-  // Agrupar materiais por data de aula
-  const materialsByDate: Record<string, typeof materials> = {};
-  materials.forEach(mat => {
-    if (!materialsByDate[mat.lesson_date]) materialsByDate[mat.lesson_date] = [];
-    materialsByDate[mat.lesson_date].push(mat);
-  });
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500 pb-20">
@@ -288,39 +281,14 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
           <h2 className="text-xl font-bold">Materiais de Aula</h2>
         </div>
         <p className="text-sm text-muted-foreground mb-6">
-          Anexe PDFs, apresentações, áudios, vídeos ou links de estudo vinculados a uma aula específica.
+          Prepare PDFs, apresentações, áudios, links ou vídeos para as aulas deste aluno. O aluno verá automaticamente no portal dele.
         </p>
-
-        {/* Selector de aula */}
-        {logs && logs.length > 0 ? (
-          <div className="space-y-6">
-            {(logs ?? []).slice(0, 10).map(log => (
-              <div key={log.id} className="border border-border/50 rounded-xl overflow-hidden">
-                <div className="flex items-center gap-3 px-4 py-3 bg-card/30 border-b border-border/30">
-                  <Calendar className="w-4 h-4 text-brand-pink" />
-                  <span className="text-sm font-bold">
-                    {new Date(log.lesson_date + 'T12:00:00').toLocaleDateString('pt-BR')}
-                  </span>
-                  <span className="text-xs text-muted-foreground line-clamp-1 flex-1">{log.content || 'Sem conteúdo'}</span>
-                  {materialsByDate[log.lesson_date]?.length > 0 && (
-                    <span className="text-[10px] font-bold text-brand-purple bg-brand-purple/10 px-2 py-0.5 rounded-full border border-brand-purple/20">
-                      {materialsByDate[log.lesson_date].length} arquivo(s)
-                    </span>
-                  )}
-                </div>
-                <div className="p-4">
-                  <MaterialUploadPanel
-                    studentId={id}
-                    lessonDate={log.lesson_date}
-                    initialMaterials={materialsByDate[log.lesson_date] ?? []}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-center text-muted-foreground py-8 text-sm">Registre aulas primeiro para poder anexar materiais.</p>
-        )}
+        <SmartMaterialPanel
+          studentId={id}
+          schedule={student.schedule}
+          logs={logs ?? []}
+          materials={materials}
+        />
       </div>
     </div>
   );

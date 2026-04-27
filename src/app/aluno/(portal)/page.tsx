@@ -63,6 +63,33 @@ export default async function AlunoDashboard() {
 
   const pendingHomeworks = (homeworks || []).filter(h => h.status === 'pending');
 
+  // Calcular próxima data de aula (para exibir materiais futuros no portal do aluno)
+  const DAY_MAP: Record<string, number> = {
+    dom: 0, seg: 1, ter: 2, qua: 3, qui: 4, sex: 5, 'sáb': 6, sab: 6,
+  };
+  const scheduleStr = (student.schedule || '').toLowerCase();
+  const scheduledWeekDays: number[] = [];
+  Object.entries(DAY_MAP).forEach(([key, val]) => {
+    if (scheduleStr.includes(key)) scheduledWeekDays.push(val);
+  });
+
+  // Próxima aula = próximo dia da semana com aula, a partir de hoje
+  let nextLessonDate = '';
+  if (scheduledWeekDays.length > 0) {
+    for (let i = 0; i <= 14; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      if (scheduledWeekDays.includes(d.getDay())) {
+        nextLessonDate = d.toISOString().split('T')[0];
+        break;
+      }
+    }
+  }
+
+  const nextLessonMaterials = nextLessonDate
+    ? (materials || []).filter(m => m.lesson_date === nextLessonDate)
+    : [];
+
   return (
     <div className="space-y-8 pb-20">
       
@@ -128,9 +155,83 @@ export default async function AlunoDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* COLUNA ESQUERDA: AULAS E MATERIAIS */}
+        {/* COLUNA ESQUERDA: PRÓXIMA AULA + HISTÓRICO */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="flex items-center gap-2 mb-4">
+
+          {/* ── PRÓXIMA AULA ─────────────────────────────── */}
+          {nextLessonDate && (
+            <div className="glass p-6 rounded-2xl border border-emerald-500/30 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2" />
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                    Próxima Aula
+                  </p>
+                  <h3 className="text-xl font-bold text-foreground">
+                    {new Date(nextLessonDate + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  </h3>
+                  {student.schedule && (
+                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      {student.schedule}
+                    </p>
+                  )}
+                </div>
+                {student.meeting_link && (
+                  <a
+                    href={student.meeting_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-brand-purple hover:bg-brand-purple-hover text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-brand-purple/30 transition-all shrink-0"
+                  >
+                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                    Entrar na Aula
+                  </a>
+                )}
+              </div>
+
+              {/* Materiais da próxima aula */}
+              {nextLessonMaterials.length > 0 ? (
+                <div className="mt-5 pt-5 border-t border-emerald-500/20">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <Paperclip className="w-3.5 h-3.5 text-brand-purple" />
+                    Materiais Preparados para esta Aula
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {nextLessonMaterials.map(m => (
+                      <a
+                        key={m.id}
+                        href={m.file_url || m.link_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 bg-black/20 border border-brand-purple/20 hover:border-brand-purple/50 rounded-xl text-sm text-muted-foreground hover:text-foreground transition-all group/link"
+                      >
+                        <div className="w-9 h-9 rounded-lg bg-brand-purple/10 border border-brand-purple/20 flex items-center justify-center shrink-0 group-hover/link:bg-brand-purple/20 transition-colors">
+                          <Paperclip className="w-4 h-4 text-brand-purple" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold truncate">{m.file_name || m.link_title || 'Material'}</p>
+                          <p className="text-[10px] uppercase font-bold text-brand-purple/70">{m.file_type}</p>
+                        </div>
+                        <ExternalLink className="w-3.5 h-3.5 shrink-0 ml-auto opacity-50 group-hover/link:opacity-100" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 pt-4 border-t border-emerald-500/20">
+                  <p className="text-xs text-muted-foreground italic flex items-center gap-1.5">
+                    <Paperclip className="w-3.5 h-3.5" />
+                    Nenhum material preparado para esta aula ainda.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── HISTÓRICO ─────────────────────────────────── */}
+          <div className="flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-brand-pink" />
             <h2 className="text-xl font-bold">Histórico de Aulas & Materiais</h2>
           </div>

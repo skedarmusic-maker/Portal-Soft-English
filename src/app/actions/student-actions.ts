@@ -117,11 +117,11 @@ export async function updateStudent(formData: FormData) {
   return { success: true };
 }
 
-export async function generateStudentMeetLink(studentId: string, studentName: string) {
+export async function generateStudentMeetLink(studentId: string, studentName: string): Promise<{ error?: string; link?: string; success?: boolean }> {
   const { createMeetingLink } = await import('@/lib/google-calendar');
   const result = await createMeetingLink(studentName);
 
-  if (result.error) return result;
+  if (result.error) return { error: result.error };
 
   const { error } = await supabase
     .from('students')
