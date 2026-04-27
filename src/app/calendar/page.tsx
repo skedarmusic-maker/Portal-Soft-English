@@ -105,14 +105,21 @@ export default function CalendarPage() {
   // Helper para identificar o dia da semana a partir do texto de horário
   const getScheduledDays = (schedule: string) => {
     const days: number[] = [];
-    if (schedule.includes('Seg')) days.push(1);
-    if (schedule.includes('Ter')) days.push(2);
-    if (schedule.includes('Qua')) days.push(3);
-    if (schedule.includes('Qui')) days.push(4);
-    if (schedule.includes('Sex')) days.push(5);
-    if (schedule.includes('Sáb')) days.push(6);
+    const s = (schedule || '').toLowerCase();
+    
+    if (s.includes('seg')) days.push(1);
+    if (s.includes('ter')) days.push(2);
+    if (s.includes('qua')) days.push(3);
+    if (s.includes('qui')) days.push(4);
+    if (s.includes('sex')) days.push(5);
+    if (s.includes('sáb') || s.includes('sab')) days.push(6);
+    if (s.includes('dom')) days.push(0);
+    
     return days;
   };
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -182,7 +189,7 @@ export default function CalendarPage() {
                 const dayLogs = events.filter(e => e.lesson_date === dateKey);
                 
                 // Projetar alunos agendados se não houver log (APENAS PARA HOJE OU FUTURO)
-                const isPast = day < new Date(new Date().setHours(0,0,0,0));
+                const isPast = day.getTime() < today.getTime();
                 
                 const scheduledStudents = isPast ? [] : students.filter(s => {
                   const dayOfWeek = day.getDay();
