@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { loginStudent } from '@/app/actions/auth';
 import { Loader2, Lock, UserCheck } from 'lucide-react';
 import Image from 'next/image';

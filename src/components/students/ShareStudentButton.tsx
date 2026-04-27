@@ -37,25 +37,24 @@ export default function ShareStudentButton({ studentName, accessCode }: ShareStu
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1" onClick={(e) => e.preventDefault()}>
       <button
         onClick={handleShare}
-        className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-border rounded-lg text-sm font-medium transition-all group"
-        title="Compartilhar portal do aluno"
+        className="p-1.5 bg-white/5 hover:bg-brand-pink/10 border border-border hover:border-brand-pink/30 rounded-md transition-all group"
+        title="Compartilhar acesso do aluno"
       >
-        <Share2 className="w-4 h-4 text-brand-pink group-hover:scale-110 transition-transform" />
-        <span className="hidden sm:inline">Compartilhar Acesso</span>
+        <Share2 className="w-3.5 h-3.5 text-brand-pink group-hover:scale-110 transition-transform" />
       </button>
 
       <button
         onClick={copyToClipboard}
-        className="p-2 bg-white/5 hover:bg-white/10 border border-border rounded-lg text-sm font-medium transition-all group"
+        className="p-1.5 bg-white/5 hover:bg-white/10 border border-border rounded-md transition-all group"
         title="Copiar mensagem de acesso"
       >
         {copied ? (
-          <Check className="w-4 h-4 text-emerald-400" />
+          <Check className="w-3.5 h-3.5 text-emerald-400" />
         ) : (
-          <Copy className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+          <Copy className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
         )}
       </button>
     </div>

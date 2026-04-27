@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Home, Users, Calendar, Settings, BookOpen } from 'lucide-react';
+import NextClassWidget from './NextClassWidget';
 
 const navItems = [
   { name: 'Dashboard', href: '/', icon: Home },
@@ -44,11 +45,7 @@ export function Sidebar() {
       </nav>
       
       <div className="p-4 border-t border-border">
-        <div className="glass-pink p-4 rounded-xl flex flex-col items-center text-center">
-           <span className="text-sm font-medium mb-1 text-foreground">Próxima Aula</span>
-           <span className="text-xs text-brand-pink font-semibold tracking-wide">HOJE, 18:00</span>
-           <span className="text-sm text-foreground mt-1 text-center">Joaquim Silva</span>
-        </div>
+        <NextClassWidget />
       </div>
     </aside>
   );

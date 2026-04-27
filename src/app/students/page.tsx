@@ -66,7 +66,7 @@ export default async function StudentsPage() {
                   <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${color} flex items-center justify-center text-white font-bold text-xl shadow-lg`}>
                     {initials}
                   </div>
-                  <div className="flex gap-2" onClick={(e) => e.preventDefault()}>
+                  <div className="flex gap-2">
                     <ShareStudentButton studentName={student.name} accessCode={student.access_code} />
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider ${
                       student.status === 'active'
