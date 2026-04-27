@@ -13,6 +13,7 @@ import NotesButton from '@/components/attendance/NotesButton';
 
 import EditStudentButton from '@/components/students/EditStudentButton';
 import ShareStudentButton from '@/components/students/ShareStudentButton';
+import GenerateMeetLinkButton from '@/components/students/GenerateMeetLinkButton';
 
 import DeleteLessonButton from '@/components/attendance/DeleteLessonButton';
 import { Trash2 } from 'lucide-react';
@@ -118,6 +119,11 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
                   Entrar na Aula
                 </a>
               )}
+              <GenerateMeetLinkButton 
+                studentId={student.id} 
+                studentName={student.name} 
+                hasLink={!!student.meeting_link} 
+              />
               <ShareStudentButton studentName={student.name} accessCode={student.access_code} />
               <EditStudentButton student={student} allStudents={allStudents || []} />
             </div>

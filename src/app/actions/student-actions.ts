@@ -116,3 +116,24 @@ export async function updateStudent(formData: FormData) {
   revalidatePath('/');
   return { success: true };
 }
+
+export async function generateStudentMeetLink(studentId: string, studentName: string) {
+  const { createMeetingLink } = await import('@/lib/google-calendar');
+  const result = await createMeetingLink(studentName);
+
+  if (result.error) return result;
+
+  const { error } = await supabase
+    .from('students')
+    .update({ meeting_link: result.link })
+    .eq('id', studentId);
+
+  if (error) {
+    console.error('Erro ao salvar link do Meet:', error);
+    return { error: 'Erro ao salvar o link no banco' };
+  }
+
+  revalidatePath(`/students/${studentId}`);
+  revalidatePath('/students');
+  return { success: true, link: result.link };
+}

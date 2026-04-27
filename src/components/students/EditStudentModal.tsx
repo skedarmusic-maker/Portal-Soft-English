@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { updateStudent } from '@/app/actions/student-actions';
 import { X, Loader2, User, Mail, Phone, Target, Lock, DollarSign, Calendar, BookOpen, Hash, Power, AlertCircle } from 'lucide-react';
+import GenerateMeetLinkButton from './GenerateMeetLinkButton';
 
 const DAYS = [
   { id: 'seg', label: 'SEG', key: 'Seg' },
@@ -271,7 +272,10 @@ export default function EditStudentModal({ student, onClose, allStudents = [] }:
                 </div>
                 <div>
                   <FieldLabel icon={User} label="Link Fixo do Meet" />
-                  <input name="meeting_link" type="url" defaultValue={student.meeting_link || ''} placeholder="https://meet.google.com/xxx-xxxx-xxx" className={inputCls} />
+                  <div className="flex gap-2">
+                    <input name="meeting_link" type="url" defaultValue={student.meeting_link || ''} placeholder="https://meet.google.com/xxx-xxxx-xxx" className={inputCls} />
+                    <GenerateMeetLinkButton studentId={student.id} studentName={student.name} hasLink={!!student.meeting_link} />
+                  </div>
                 </div>
               </div>
             </div>

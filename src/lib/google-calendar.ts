@@ -133,3 +133,46 @@ export async function deleteEvent(eventId: string) {
     console.error('Erro ao deletar evento do Google Calendar:', error);
   }
 }
+
+export async function createMeetingLink(studentName: string) {
+  try {
+    const oauth2Client = await getOAuthClient();
+    if (!oauth2Client) return { error: 'Conta Google não conectada' };
+
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+    
+    // Criar um evento para gerar o link do Meet
+    // Usamos um requestId único para garantir a criação da conferência
+    const res = await calendar.events.insert({
+      calendarId: 'primary',
+      conferenceDataVersion: 1,
+      requestBody: {
+        summary: `Aula Permanente: ${studentName}`,
+        description: `Link gerado automaticamente pelo Portal Soft English para aulas com ${studentName}.`,
+        start: { 
+          dateTime: new Date().toISOString(),
+          timeZone: 'America/Sao_Paulo'
+        },
+        end: { 
+          dateTime: new Date(Date.now() + 30 * 60000).toISOString(), // 30 min depois
+          timeZone: 'America/Sao_Paulo'
+        },
+        conferenceData: {
+          createRequest: {
+            requestId: `meet-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+            conferenceSolutionKey: { type: 'hangoutsMeet' }
+          }
+        }
+      }
+    });
+
+    if (!res.data.hangoutLink) {
+      return { error: 'O Google não retornou um link de Meet. Verifique se sua conta permite criar reuniões.' };
+    }
+
+    return { link: res.data.hangoutLink };
+  } catch (error: any) {
+    console.error('Erro ao criar link do Meet:', error);
+    return { error: error.message || 'Erro ao gerar link do Meet' };
+  }
+}
