@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
 import { 
   Calendar as CalendarIcon, 
@@ -105,14 +107,14 @@ export default function CalendarPage() {
   // Helper para identificar o dia da semana a partir do texto de horário
   const getScheduledDays = (schedule: string) => {
     const days: number[] = [];
-    const s = (schedule || '').toLowerCase();
+    const s = (schedule || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     
     if (s.includes('seg')) days.push(1);
     if (s.includes('ter')) days.push(2);
     if (s.includes('qua')) days.push(3);
     if (s.includes('qui')) days.push(4);
     if (s.includes('sex')) days.push(5);
-    if (s.includes('sáb') || s.includes('sab')) days.push(6);
+    if (s.includes('sab')) days.push(6);
     if (s.includes('dom')) days.push(0);
     
     return days;

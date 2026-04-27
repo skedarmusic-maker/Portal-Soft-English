@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import Link from 'next/link';
 import { Filter, GraduationCap } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
