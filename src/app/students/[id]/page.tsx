@@ -78,6 +78,13 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
   const reschedulesDone = (logs ?? []).filter(l => l.is_reposicao).map(l => l.reposicao_date);
   const pendingReschedules = (logs ?? []).filter(l => ['holiday', 'justified'].includes(l.status) && !reschedulesDone.includes(l.lesson_date));
 
+  // Agrupar materiais por data de aula para o contador na tabela
+  const materialsByDate: Record<string, any[]> = {};
+  materials.forEach(mat => {
+    if (!materialsByDate[mat.lesson_date]) materialsByDate[mat.lesson_date] = [];
+    materialsByDate[mat.lesson_date].push(mat);
+  });
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500 pb-20">
       {/* Navegação */}
