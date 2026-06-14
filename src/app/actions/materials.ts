@@ -8,6 +8,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.warn('AVISO: SUPABASE_SERVICE_ROLE_KEY não encontrada no ambiente. Usando chave anon.');
+} else {
+  console.log('Sucesso: SUPABASE_SERVICE_ROLE_KEY carregada.');
+}
+
 export async function uploadMaterial(formData: FormData) {
   const studentId = formData.get('studentId') as string;
   const lessonDate = formData.get('lessonDate') as string;
