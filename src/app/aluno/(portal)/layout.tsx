@@ -35,7 +35,7 @@ export default async function AlunoLayout({ children }: { children: React.ReactN
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-3">
-              <Image src="/images/filesooft.png" alt="Logo" width={100} height={32} className="object-contain" />
+              <Image src="/images/filesooft.png" alt="Logo" width={32} height={32} className="h-8 w-8 object-contain rounded-full" />
               <span className="hidden sm:inline-block text-xs font-bold text-muted-foreground uppercase tracking-wider border-l border-border pl-3">
                 Portal do Aluno
               </span>
