@@ -223,3 +223,63 @@ export async function cancelLessonByStudent(logId: string) {
   return { success: true };
 }
 
+export async function confirmProjectedLessonByStudent(studentId: string, date: string, time: string) {
+  // Criar um novo log de presença (present)
+  const { data: newLog, error } = await supabase
+    .from('attendance_logs')
+    .insert({
+      student_id: studentId,
+      lesson_date: date,
+      lesson_time: time || null,
+      status: 'present',
+      content: 'Aula Confirmada pelo Aluno'
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Erro ao confirmar aula projetada:', error);
+    return { error: 'Erro ao confirmar presença' };
+  }
+
+  // Sincronizar com Google Agenda
+  await syncEvent(newLog.id);
+
+  revalidatePath('/aluno');
+  revalidatePath(`/students/${studentId}`);
+  revalidatePath('/calendar');
+  revalidatePath('/');
+
+  return { success: true };
+}
+
+export async function cancelProjectedLessonByStudent(studentId: string, date: string, time: string) {
+  // Criar um novo log já desmarcado (justified)
+  const { data: newLog, error } = await supabase
+    .from('attendance_logs')
+    .insert({
+      student_id: studentId,
+      lesson_date: date,
+      lesson_time: time || null,
+      status: 'justified',
+      content: 'Desmarcado pelo Aluno (Projeção Regular)'
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Erro ao desmarcar aula projetada:', error);
+    return { error: 'Erro ao desmarcar aula' };
+  }
+
+  // Sincronizar com Google Agenda
+  await syncEvent(newLog.id);
+
+  revalidatePath('/aluno');
+  revalidatePath(`/students/${studentId}`);
+  revalidatePath('/calendar');
+  revalidatePath('/');
+
+  return { success: true };
+}
+

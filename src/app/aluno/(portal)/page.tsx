@@ -56,11 +56,6 @@ export default async function AlunoDashboard() {
   const lessonsTaken = thisMonthPresent.length;
   const lessonsRemaining = Math.max(0, totalClassesTarget - lessonsTaken);
 
-  // Aulas agendadas do mês atual ordenadas cronologicamente
-  const thisMonthLessons = allLogs
-    .filter(l => l.lesson_date >= firstDay && l.lesson_date <= lastDay)
-    .sort((a, b) => a.lesson_date.localeCompare(b.lesson_date));
-  
   // Agrupar materiais
   const materialsByDate: Record<string, any[]> = {};
   (materials || []).forEach(mat => {
@@ -70,34 +65,55 @@ export default async function AlunoDashboard() {
 
   const pendingHomeworks = (homeworks || []).filter(h => h.status === 'pending');
 
-  // Encontrar próxima aula real no banco (de hoje em diante)
+  // Encontrar data de hoje em São Paulo
   const todayLocalStr = new Intl.DateTimeFormat('fr-CA', {
     timeZone: 'America/Sao_Paulo',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
   }).format(new Date());
-  
+
+  // 1. Aulas reais no passado (últimos 7 dias) que continuam pendentes (status = 'scheduled')
+  const weekAgoStr = new Intl.DateTimeFormat('fr-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+
+  const pendingPastLessons = allLogs
+    .filter(l => l.lesson_date >= weekAgoStr && l.lesson_date < todayLocalStr && l.status === 'scheduled')
+    .sort((a, b) => a.lesson_date.localeCompare(b.lesson_date));
+
+  // 2. Aulas futuras reais (de hoje em diante)
   const upcomingRealLessons = allLogs
     .filter(l => l.lesson_date >= todayLocalStr)
     .sort((a, b) => a.lesson_date.localeCompare(b.lesson_date));
-  
-  const nextRealLesson = upcomingRealLessons[0];
-  
+
   let nextLessonDate = '';
   let isRealLesson = false;
   let nextRealLessonId = '';
   let nextRealLessonStatus = '';
   let nextRealLessonTime = '';
+  let isPendingConfirm = false;
 
-  if (nextRealLesson) {
-    nextLessonDate = nextRealLesson.lesson_date;
+  if (pendingPastLessons.length > 0) {
+    const nextLessonObj = pendingPastLessons[0];
+    nextLessonDate = nextLessonObj.lesson_date;
     isRealLesson = true;
-    nextRealLessonId = nextRealLesson.id;
-    nextRealLessonStatus = nextRealLesson.status;
-    nextRealLessonTime = nextRealLesson.lesson_time || '';
+    nextRealLessonId = nextLessonObj.id;
+    nextRealLessonStatus = nextLessonObj.status;
+    nextRealLessonTime = nextLessonObj.lesson_time || '';
+    isPendingConfirm = true;
+  } else if (upcomingRealLessons.length > 0) {
+    const nextLessonObj = upcomingRealLessons[0];
+    nextLessonDate = nextLessonObj.lesson_date;
+    isRealLesson = true;
+    nextRealLessonId = nextLessonObj.id;
+    nextRealLessonStatus = nextLessonObj.status;
+    nextRealLessonTime = nextLessonObj.lesson_time || '';
   } else {
-    // Calcular próxima data de aula (para exibir materiais futuros no portal do aluno)
+    // Calcular próxima data de aula recorrente (projeção)
     const DAY_MAP: Record<string, number> = {
       dom: 0, seg: 1, ter: 2, qua: 3, qui: 4, sex: 5, 'sáb': 6, sab: 6,
     };
@@ -107,17 +123,80 @@ export default async function AlunoDashboard() {
       if (scheduleStr.includes(key)) scheduledWeekDays.push(val);
     });
 
+    let projectedDate = '';
     if (scheduledWeekDays.length > 0) {
       for (let i = 0; i <= 14; i++) {
         const d = new Date();
         d.setDate(d.getDate() + i);
-        if (scheduledWeekDays.includes(d.getDay())) {
-          nextLessonDate = d.toISOString().split('T')[0];
+        const dStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Sao_Paulo' }).format(d);
+        const hasRealLog = allLogs.some(l => l.lesson_date === dStr);
+        if (scheduledWeekDays.includes(d.getDay()) && !hasRealLog) {
+          projectedDate = dStr;
           break;
         }
       }
     }
+
+    if (projectedDate) {
+      nextLessonDate = projectedDate;
+      isRealLesson = false;
+      nextRealLessonStatus = 'scheduled';
+      nextRealLessonTime = student.schedule?.match(/(\d{2}:\d{2})/)?.[1] || '';
+    }
   }
+
+  // Obter todos os dias do mês atual para projetar a agenda recorrente completa do aluno
+  const DAY_MAP_MONTH: Record<string, number> = {
+    dom: 0, seg: 1, ter: 2, qua: 3, qui: 4, sex: 5, 'sáb': 6, sab: 6,
+  };
+  const scheduleStrMonth = (student.schedule || '').toLowerCase();
+  const scheduledWeekDaysMonth: number[] = [];
+  Object.entries(DAY_MAP_MONTH).forEach(([key, val]) => {
+    if (scheduleStrMonth.includes(key)) scheduledWeekDaysMonth.push(val);
+  });
+  const defaultTimeMonth = student.schedule?.match(/(\d{2}:\d{2})/)?.[1] || '14:00';
+
+  const daysInMonth: string[] = [];
+  const startMonthDate = new Date(today.getFullYear(), today.getMonth(), 1);
+  const endMonthDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  
+  let curr = new Date(startMonthDate);
+  while (curr <= endMonthDate) {
+    const dStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Sao_Paulo' }).format(curr);
+    daysInMonth.push(dStr);
+    curr.setDate(curr.getDate() + 1);
+  }
+
+  const monthlyLessonsMerged: any[] = [];
+  daysInMonth.forEach(dStr => {
+    const dayLogs = allLogs.filter(l => l.lesson_date === dStr);
+    if (dayLogs.length > 0) {
+      dayLogs.forEach(log => {
+        monthlyLessonsMerged.push({
+          ...log,
+          isProjected: false
+        });
+      });
+    } else {
+      const dayDate = new Date(dStr + 'T12:00:00');
+      const dayOfWeek = dayDate.getDay();
+      const isPast = dStr < todayLocalStr;
+
+      if (!isPast && scheduledWeekDaysMonth.includes(dayOfWeek)) {
+        monthlyLessonsMerged.push({
+          id: `projected-${dStr}`,
+          student_id: studentId,
+          lesson_date: dStr,
+          lesson_time: defaultTimeMonth,
+          status: 'scheduled',
+          content: 'Aula Regular Agendada',
+          isProjected: true
+        });
+      }
+    }
+  });
+
+  monthlyLessonsMerged.sort((a, b) => a.lesson_date.localeCompare(b.lesson_date));
 
   const nextLessonMaterials = nextLessonDate
     ? (materials || []).filter(m => m.lesson_date === nextLessonDate)
@@ -193,14 +272,21 @@ export default async function AlunoDashboard() {
 
           {/* ── PRÓXIMA AULA ─────────────────────────────── */}
           {nextLessonDate && (
-            <div className={`glass p-6 rounded-2xl relative overflow-hidden border ${isRealLesson && nextRealLessonStatus === 'justified' ? 'border-amber-500/30' : 'border-emerald-500/30'}`}>
+            <div className={`glass p-6 rounded-2xl relative overflow-hidden border ${isPendingConfirm ? 'border-amber-500/50 bg-amber-500/5' : isRealLesson && nextRealLessonStatus === 'justified' ? 'border-amber-500/30' : 'border-emerald-500/30'}`}>
               <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2" />
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
-                  <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
-                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                    {isRealLesson ? 'Aula Agendada' : 'Próxima Aula (Projeção)'}
-                  </p>
+                  {isPendingConfirm ? (
+                    <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1 flex items-center gap-1.5 animate-pulse">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      Aula Pendente de Confirmação
+                    </p>
+                  ) : (
+                    <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                      <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                      {isRealLesson ? 'Aula Agendada' : 'Próxima Aula (Projeção)'}
+                    </p>
+                  )}
                   <h3 className="text-xl font-bold text-foreground">
                     {new Date(nextLessonDate + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
                   </h3>
@@ -225,14 +311,14 @@ export default async function AlunoDashboard() {
               </div>
 
               {/* Ações do Aluno (Confirmar / Cancelar) */}
-              {isRealLesson && (
-                <LessonActions
-                  logId={nextRealLessonId}
-                  lessonDate={nextLessonDate}
-                  lessonTime={nextRealLessonTime}
-                  status={nextRealLessonStatus}
-                />
-              )}
+              <LessonActions
+                logId={isRealLesson ? nextRealLessonId : undefined}
+                studentId={studentId}
+                isProjected={!isRealLesson}
+                lessonDate={nextLessonDate}
+                lessonTime={nextRealLessonTime}
+                status={nextRealLessonStatus}
+              />
 
 
               {/* Materiais da próxima aula */}
@@ -283,10 +369,11 @@ export default async function AlunoDashboard() {
           </div>
 
           <div className="glass rounded-2xl border border-border/50 divide-y divide-white/5 overflow-hidden">
-            {thisMonthLessons.length > 0 ? (
-              thisMonthLessons.map(lesson => {
+            {monthlyLessonsMerged.length > 0 ? (
+              monthlyLessonsMerged.map(lesson => {
                 const dateObj = new Date(lesson.lesson_date + 'T12:00:00');
                 const isFuture = lesson.lesson_date >= todayLocalStr;
+                const showActions = isFuture || lesson.status === 'scheduled';
 
                 return (
                   <div key={lesson.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-white/5 transition-colors">
@@ -310,6 +397,11 @@ export default async function AlunoDashboard() {
                               Reposição
                             </span>
                           )}
+                          {lesson.isProjected && (
+                            <span className="text-[9px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                              Regular
+                            </span>
+                          )}
                         </h4>
                         <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
@@ -320,9 +412,11 @@ export default async function AlunoDashboard() {
 
                     {/* Status / Ações */}
                     <div className="sm:text-right shrink-0">
-                      {isFuture ? (
+                      {showActions ? (
                         <LessonActions
-                          logId={lesson.id}
+                          logId={lesson.isProjected ? undefined : lesson.id}
+                          studentId={studentId}
+                          isProjected={lesson.isProjected}
                           lessonDate={lesson.lesson_date}
                           lessonTime={lesson.lesson_time || ''}
                           status={lesson.status}

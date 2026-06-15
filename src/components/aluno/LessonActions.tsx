@@ -2,17 +2,32 @@
 
 import { useState } from 'react';
 import { Check, X, Loader2, AlertCircle } from 'lucide-react';
-import { confirmLessonByStudent, cancelLessonByStudent } from '@/app/actions/attendance';
+import { 
+  confirmLessonByStudent, 
+  cancelLessonByStudent,
+  confirmProjectedLessonByStudent,
+  cancelProjectedLessonByStudent
+} from '@/app/actions/attendance';
 
 interface LessonActionsProps {
-  logId: string;
+  logId?: string;
+  studentId?: string;
+  isProjected?: boolean;
   lessonDate: string;
   lessonTime: string;
   status: string;
   compact?: boolean;
 }
 
-export default function LessonActions({ logId, lessonDate, lessonTime, status, compact = false }: LessonActionsProps) {
+export default function LessonActions({ 
+  logId, 
+  studentId,
+  isProjected = false,
+  lessonDate, 
+  lessonTime, 
+  status, 
+  compact = false 
+}: LessonActionsProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -29,7 +44,15 @@ export default function LessonActions({ logId, lessonDate, lessonTime, status, c
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
-      const res = await confirmLessonByStudent(logId);
+      let res;
+      if (isProjected && studentId) {
+        res = await confirmProjectedLessonByStudent(studentId, lessonDate, lessonTime);
+      } else if (logId) {
+        res = await confirmLessonByStudent(logId);
+      } else {
+        res = { error: 'Dados insuficientes' };
+      }
+
       if (res.error) {
         setErrorMsg(res.error);
       } else {
@@ -57,7 +80,15 @@ export default function LessonActions({ logId, lessonDate, lessonTime, status, c
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
-      const res = await cancelLessonByStudent(logId);
+      let res;
+      if (isProjected && studentId) {
+        res = await cancelProjectedLessonByStudent(studentId, lessonDate, lessonTime);
+      } else if (logId) {
+        res = await cancelLessonByStudent(logId);
+      } else {
+        res = { error: 'Dados insuficientes' };
+      }
+
       if (res.error) {
         setErrorMsg(res.error);
       } else {

@@ -4,11 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Search, Bell, Menu, Settings, LogOut, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
-interface HeaderProps {
-  onOpenMenu?: () => void;
-}
-
-export function Header({ onOpenMenu }: HeaderProps) {
+export function Header() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [hasNewNotifications, setHasNewNotifications] = useState(true);
@@ -59,7 +55,7 @@ export function Header({ onOpenMenu }: HeaderProps) {
       <div className="flex items-center gap-4">
         {/* Botão do Menu Mobile */}
         <button 
-          onClick={onOpenMenu}
+          onClick={() => window.dispatchEvent(new Event('open-sidebar'))}
           className="md:hidden p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-white/5 transition-all"
           title="Abrir menu"
         >

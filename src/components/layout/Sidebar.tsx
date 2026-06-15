@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Home, Users, Calendar, Settings, BookOpen, X } from 'lucide-react';
@@ -11,18 +14,32 @@ const navItems = [
   { name: 'Configurações', href: '/settings', icon: Settings },
 ];
 
-interface SidebarProps {
-  isOpen?: boolean;
-  onClose?: () => void;
-}
+export function Sidebar() {
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
+  useEffect(() => {
+    function handleOpen() {
+      setIsMobileOpen(true);
+    }
+    function handleClose() {
+      setIsMobileOpen(false);
+    }
+
+    window.addEventListener('open-sidebar', handleOpen);
+    window.addEventListener('close-sidebar', handleClose);
+
+    return () => {
+      window.removeEventListener('open-sidebar', handleOpen);
+      window.removeEventListener('close-sidebar', handleClose);
+    };
+  }, []);
+
   return (
     <>
       {/* Overlay escuro no mobile quando aberta */}
-      {isOpen && (
+      {isMobileOpen && (
         <div 
-          onClick={onClose}
+          onClick={() => setIsMobileOpen(false)}
           className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 md:hidden"
         />
       )}
@@ -31,8 +48,8 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       <aside className={`
         fixed md:relative top-0 left-0 h-screen w-64 border-r border-border bg-card 
         flex-shrink-0 flex flex-col z-50 transition-transform duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        ${isOpen ? 'shadow-2xl' : ''}
+        ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        ${isMobileOpen ? 'shadow-2xl' : ''}
         md:flex
       `}>
         <div className="h-16 flex items-center justify-between px-6 border-b border-border">
@@ -53,7 +70,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
           {/* Botão de Fechar no Mobile */}
           <button 
-            onClick={onClose}
+            onClick={() => setIsMobileOpen(false)}
             className="md:hidden p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-white/5"
             title="Fechar menu"
           >
@@ -66,7 +83,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
             <Link
               key={item.name}
               href={item.href}
-              onClick={onClose} // Fecha a sidebar ao clicar em um link no mobile
+              onClick={() => setIsMobileOpen(false)} // Fecha a sidebar ao clicar em um link no mobile
               className="flex items-center gap-3 px-3 py-2.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors group font-medium"
             >
               <item.icon className="w-5 h-5 group-hover:text-brand-pink transition-colors" />
