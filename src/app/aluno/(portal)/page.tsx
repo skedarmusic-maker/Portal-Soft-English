@@ -55,6 +55,11 @@ export default async function AlunoDashboard() {
   const totalClassesTarget = student.monthly_plan_classes || 8; // Default 8 se nulo
   const lessonsTaken = thisMonthPresent.length;
   const lessonsRemaining = Math.max(0, totalClassesTarget - lessonsTaken);
+
+  // Aulas agendadas do mês atual ordenadas cronologicamente
+  const thisMonthLessons = allLogs
+    .filter(l => l.lesson_date >= firstDay && l.lesson_date <= lastDay)
+    .sort((a, b) => a.lesson_date.localeCompare(b.lesson_date));
   
   // Agrupar materiais
   const materialsByDate: Record<string, any[]> = {};
@@ -269,8 +274,94 @@ export default async function AlunoDashboard() {
             </div>
           )}
 
+          {/* ── AGENDA DO MÊS ─────────────────────────────── */}
+          <div className="flex items-center gap-2 mt-8">
+            <Calendar className="w-5 h-5 text-cyan-400" />
+            <h2 className="text-xl font-bold first-letter:uppercase">
+              Agenda de {new Date().toLocaleDateString('pt-BR', { month: 'long' })}
+            </h2>
+          </div>
+
+          <div className="glass rounded-2xl border border-border/50 divide-y divide-white/5 overflow-hidden">
+            {thisMonthLessons.length > 0 ? (
+              thisMonthLessons.map(lesson => {
+                const dateObj = new Date(lesson.lesson_date + 'T12:00:00');
+                const isFuture = lesson.lesson_date >= todayLocalStr;
+
+                return (
+                  <div key={lesson.id} className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-white/5 transition-colors">
+                    <div className="flex items-center gap-4">
+                      {/* Badge de Data */}
+                      <div className="flex flex-col items-center justify-center bg-white/5 border border-border w-12 h-12 rounded-xl text-center shrink-0">
+                        <span className="text-[9px] font-bold text-brand-purple uppercase tracking-wider">
+                          {dateObj.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                        </span>
+                        <span className="text-lg font-black text-foreground -mt-1">
+                          {dateObj.getDate().toString().padStart(2, '0')}
+                        </span>
+                      </div>
+
+                      {/* Informações da Aula */}
+                      <div>
+                        <h4 className="font-bold text-foreground text-sm flex items-center gap-2">
+                          {dateObj.toLocaleDateString('pt-BR', { weekday: 'long' })}
+                          {lesson.is_reposicao && (
+                            <span className="text-[9px] bg-brand-purple/20 text-brand-purple border border-brand-purple/30 px-1.5 py-0.5 rounded-md font-bold uppercase">
+                              Reposição
+                            </span>
+                          )}
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {lesson.lesson_time || 'Horário não definido'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Status / Ações */}
+                    <div className="sm:text-right shrink-0">
+                      {isFuture ? (
+                        <LessonActions
+                          logId={lesson.id}
+                          lessonDate={lesson.lesson_date}
+                          lessonTime={lesson.lesson_time || ''}
+                          status={lesson.status}
+                          compact={true}
+                        />
+                      ) : (
+                        <div className="flex items-center gap-2 sm:justify-end">
+                          {lesson.status === 'present' ? (
+                            <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                              Realizada
+                            </span>
+                          ) : lesson.status === 'absent' ? (
+                            <span className="text-xs font-bold text-rose-400 bg-rose-500/10 px-2.5 py-1 rounded-full border border-rose-500/20">
+                              Falta
+                            </span>
+                          ) : lesson.status === 'justified' ? (
+                            <span className="text-xs font-bold text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                              Desmarcada
+                            </span>
+                          ) : (
+                            <span className="text-xs font-bold text-muted-foreground bg-white/5 px-2.5 py-1 rounded-full border border-border">
+                              {lesson.status}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-8 text-center text-muted-foreground text-sm">
+                Nenhuma aula agendada para este mês.
+              </div>
+            )}
+          </div>
+
           {/* ── HISTÓRICO ─────────────────────────────────── */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-8">
             <BookOpen className="w-5 h-5 text-brand-pink" />
             <h2 className="text-xl font-bold">Histórico de Aulas & Materiais</h2>
           </div>
