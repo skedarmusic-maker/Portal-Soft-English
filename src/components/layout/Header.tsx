@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Menu, User, Settings, LogOut, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Search, Bell, Menu, Settings, LogOut, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
 interface HeaderProps {
