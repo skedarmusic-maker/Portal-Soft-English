@@ -39,6 +39,36 @@ export default function NewLessonModal({
   
   const [conflicts, setConflicts] = useState<any[]>([]);
 
+  const checkConflicts = (date: string, time: string) => {
+    if (!date || !time || !students.length) {
+      setConflicts([]);
+      return;
+    }
+
+    const dayOfWeek = new Date(date + 'T12:00:00').getDay();
+    const dayLabel = DAYS_KEYS[dayOfWeek];
+
+    const foundConflicts = students.filter(s => {
+      // Don't conflict with self
+      if (s.id === studentId || !s.schedule || s.status !== 'active') return false;
+      
+      const sTime = s.schedule.match(/(\d{2}:\d{2})/)?.[1];
+      if (!sTime) return false;
+
+      const [h1, m1] = time.split(':').map(Number);
+      const [h2, m2] = sTime.split(':').map(Number);
+      const t1 = h1 * 60 + m1;
+      const t2 = h2 * 60 + m2;
+
+      const timeOverlap = Math.abs(t1 - t2) < 60;
+      const dayOverlap = dayLabel && s.schedule.includes(dayLabel);
+
+      return timeOverlap && dayOverlap;
+    });
+
+    setConflicts(foundConflicts);
+  };
+
   useEffect(() => {
     async function loadData() {
       setFetchingStudents(true);
@@ -87,36 +117,6 @@ export default function NewLessonModal({
     setLessonTime(e.target.value);
   }
 
-  function checkConflicts(date: string, time: string) {
-    if (!date || !time || !students.length) {
-      setConflicts([]);
-      return;
-    }
-
-    const dayOfWeek = new Date(date + 'T12:00:00').getDay();
-    const dayLabel = DAYS_KEYS[dayOfWeek];
-
-    const foundConflicts = students.filter(s => {
-      // Don't conflict with self
-      if (s.id === studentId || !s.schedule || s.status !== 'active') return false;
-      
-      const sTime = s.schedule.match(/(\d{2}:\d{2})/)?.[1];
-      if (!sTime) return false;
-
-      const [h1, m1] = time.split(':').map(Number);
-      const [h2, m2] = sTime.split(':').map(Number);
-      const t1 = h1 * 60 + m1;
-      const t2 = h2 * 60 + m2;
-
-      const timeOverlap = Math.abs(t1 - t2) < 60;
-      const dayOverlap = dayLabel && s.schedule.includes(dayLabel);
-
-      return timeOverlap && dayOverlap;
-    });
-
-    setConflicts(foundConflicts);
-  }
-
   async function handleDelete() {
     if (!logId || !studentId) return;
     if (!confirm('Tem certeza que deseja apagar este registro de aula? Isso também removerá o evento da sua Agenda do Google.')) return;
@@ -137,15 +137,10 @@ export default function NewLessonModal({
 
     const formData = new FormData(e.currentTarget);
     formData.append('lesson_time', lessonTime);
-    // Se for edição, precisamos passar o id? 
-    // Atualmente saveAttendance faz apenas INSERT. 
-    // Vou assumir que por enquanto o usuário quer apenas deletar e criar de novo se errou feio, 
-    // mas posso transformar em UPDATE se logId existir.
+    formData.append('studentId', studentId); // Garante o ID do aluno mesmo com select desativado (disabled)
     
-    // Para simplificar e atender a dor do usuário (deletar o erro):
     if (logId) {
-      // Se estamos "editando", primeiro deletamos o antigo (silenciosamente ou não)
-      // Mas o usuário pediu "opção de deletar". Vou focar nisso.
+      formData.append('logId', logId); // Envia o ID para que a action faça o update ao invés do insert
     }
 
     const result = await saveAttendance(formData);

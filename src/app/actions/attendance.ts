@@ -11,6 +11,7 @@ const supabase = createClient(
 );
 
 export async function saveAttendance(formData: FormData) {
+  const logId      = formData.get('logId') as string;
   const studentId  = formData.get('studentId') as string;
   const date       = formData.get('date') as string;
   const lessonTime = formData.get('lesson_time') as string;
@@ -21,17 +22,36 @@ export async function saveAttendance(formData: FormData) {
     return { error: 'ID do aluno e data são obrigatórios' };
   }
 
-  const { data: newLog, error } = await supabase
-    .from('attendance_logs')
-    .insert({
-      student_id: studentId,
-      lesson_date: date,
-      lesson_time: lessonTime || null,
-      content,
-      status,
-    })
-    .select()
-    .single();
+  let result;
+  if (logId) {
+    // Editar aula existente
+    result = await supabase
+      .from('attendance_logs')
+      .update({
+        lesson_date: date,
+        lesson_time: lessonTime || null,
+        content,
+        status,
+      })
+      .eq('id', logId)
+      .select()
+      .single();
+  } else {
+    // Criar nova aula
+    result = await supabase
+      .from('attendance_logs')
+      .insert({
+        student_id: studentId,
+        lesson_date: date,
+        lesson_time: lessonTime || null,
+        content,
+        status,
+      })
+      .select()
+      .single();
+  }
+
+  const { data: newLog, error } = result;
 
   if (error) {
     console.error('Erro ao salvar aula:', error);
