@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Home, Users, Calendar, Settings, BookOpen, X } from 'lucide-react';
+import { Home, Users, Calendar, Settings, BookOpen, X, RefreshCw } from 'lucide-react';
 import NextClassWidget from './NextClassWidget';
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
   { name: 'Alunos', href: '/students', icon: Users },
   { name: 'Planogramas', href: '/lesson-plans', icon: BookOpen },
   { name: 'Calendário', href: '/calendar', icon: Calendar },
+  { name: 'Reposições', href: '/replacement-slots', icon: RefreshCw },
   { name: 'Configurações', href: '/settings', icon: Settings },
 ];
 

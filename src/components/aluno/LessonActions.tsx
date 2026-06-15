@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, X, Loader2, AlertCircle } from 'lucide-react';
+import { Check, X, Loader2, AlertCircle, Calendar as CalendarIcon } from 'lucide-react';
 import { 
   confirmLessonByStudent, 
   cancelLessonByStudent,
   confirmProjectedLessonByStudent,
   cancelProjectedLessonByStudent
 } from '@/app/actions/attendance';
+import RescheduleModal from './RescheduleModal';
 
 interface LessonActionsProps {
   logId?: string;
@@ -29,6 +30,7 @@ export default function LessonActions({
   compact = false 
 }: LessonActionsProps) {
   const [loading, setLoading] = useState<string | null>(null);
+  const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -104,10 +106,31 @@ export default function LessonActions({
 
   if (status === 'justified') {
     return (
-      <div className={`${compact ? 'mt-0' : 'mt-4'} p-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs rounded-xl flex items-center gap-2 font-medium`}>
-        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-        <span>{compact ? 'Desmarcada' : 'Você desmarcou esta aula. Entre em contato para reagendamento.'}</span>
-      </div>
+      <>
+        <div className={`${compact ? 'mt-0' : 'mt-4'} p-3 bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-medium w-full`}>
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{compact ? 'Desmarcada' : 'Você desmarcou esta aula. Você tem 30 dias para reagendar.'}</span>
+          </div>
+
+          <button
+            onClick={() => setIsRescheduleOpen(true)}
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold text-[10px] uppercase tracking-wider transition-colors shrink-0 shadow-md shadow-amber-500/10"
+          >
+            <CalendarIcon className="w-3.5 h-3.5" />
+            Remarcar
+          </button>
+        </div>
+
+        {isRescheduleOpen && studentId && logId && (
+          <RescheduleModal
+            onClose={() => setIsRescheduleOpen(false)}
+            studentId={studentId}
+            originalLogId={logId}
+            originalDate={lessonDate}
+          />
+        )}
+      </>
     );
   }
 

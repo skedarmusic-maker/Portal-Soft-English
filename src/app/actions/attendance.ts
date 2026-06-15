@@ -212,6 +212,20 @@ export async function cancelLessonByStudent(logId: string) {
     return { error: 'Erro ao desmarcar aula' };
   }
 
+  // Liberar o horário cancelado como vago para reposição de outros alunos
+  try {
+    await supabase
+      .from('replacement_slots')
+      .insert({
+        slot_date: log.lesson_date,
+        slot_time: log.lesson_time || '14:00',
+        status: 'available',
+        original_lesson_id: logId
+      });
+  } catch (err) {
+    console.error('Erro ao auto-liberar slot de reposição:', err);
+  }
+
   // Sincronizar com Google Agenda
   await syncEvent(logId);
 
