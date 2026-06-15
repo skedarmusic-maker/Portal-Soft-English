@@ -17,7 +17,7 @@ export default function LessonActions({ logId, lessonDate, lessonTime, status }:
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Verificar se ainda dá tempo de desmarcar (antecedência mínima de 1 hora)
-  const lessonDateTime = new Date(`${lessonDate}T${lessonTime || '14:00'}:00`);
+  const lessonDateTime = new Date(`${lessonDate}T${lessonTime || '14:00'}:00-03:00`);
   const now = new Date();
   const diffMs = lessonDateTime.getTime() - now.getTime();
   const diffHours = diffMs / (1000 * 60 * 60);

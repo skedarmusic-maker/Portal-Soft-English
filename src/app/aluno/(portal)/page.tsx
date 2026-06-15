@@ -66,7 +66,13 @@ export default async function AlunoDashboard() {
   const pendingHomeworks = (homeworks || []).filter(h => h.status === 'pending');
 
   // Encontrar próxima aula real no banco (de hoje em diante)
-  const todayLocalStr = new Date().toLocaleDateString('en-CA'); // "yyyy-mm-dd" no fuso local
+  const todayLocalStr = new Intl.DateTimeFormat('fr-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+  
   const upcomingRealLessons = allLogs
     .filter(l => l.lesson_date >= todayLocalStr)
     .sort((a, b) => a.lesson_date.localeCompare(b.lesson_date));

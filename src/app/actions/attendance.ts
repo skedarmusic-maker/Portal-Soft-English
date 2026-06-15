@@ -186,7 +186,7 @@ export async function cancelLessonByStudent(logId: string) {
   // Verificar antecedência de 1 hora
   const lessonDate = log.lesson_date;
   const lessonTime = log.lesson_time || '14:00';
-  const lessonDateTime = new Date(`${lessonDate}T${lessonTime}:00`);
+  const lessonDateTime = new Date(`${lessonDate}T${lessonTime}:00-03:00`);
   const now = new Date();
 
   // Calcular diferença em milissegundos
