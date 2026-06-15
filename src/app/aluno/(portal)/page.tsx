@@ -2,6 +2,8 @@ import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { Calendar, CheckCircle2, Clock, BookOpen, AlertCircle, ExternalLink, Paperclip } from 'lucide-react';
 import Link from 'next/link';
+import LessonActions from '@/components/aluno/LessonActions';
+
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -63,25 +65,45 @@ export default async function AlunoDashboard() {
 
   const pendingHomeworks = (homeworks || []).filter(h => h.status === 'pending');
 
-  // Calcular próxima data de aula (para exibir materiais futuros no portal do aluno)
-  const DAY_MAP: Record<string, number> = {
-    dom: 0, seg: 1, ter: 2, qua: 3, qui: 4, sex: 5, 'sáb': 6, sab: 6,
-  };
-  const scheduleStr = (student.schedule || '').toLowerCase();
-  const scheduledWeekDays: number[] = [];
-  Object.entries(DAY_MAP).forEach(([key, val]) => {
-    if (scheduleStr.includes(key)) scheduledWeekDays.push(val);
-  });
-
-  // Próxima aula = próximo dia da semana com aula, a partir de hoje
+  // Encontrar próxima aula real no banco (de hoje em diante)
+  const todayLocalStr = new Date().toLocaleDateString('en-CA'); // "yyyy-mm-dd" no fuso local
+  const upcomingRealLessons = allLogs
+    .filter(l => l.lesson_date >= todayLocalStr)
+    .sort((a, b) => a.lesson_date.localeCompare(b.lesson_date));
+  
+  const nextRealLesson = upcomingRealLessons[0];
+  
   let nextLessonDate = '';
-  if (scheduledWeekDays.length > 0) {
-    for (let i = 0; i <= 14; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() + i);
-      if (scheduledWeekDays.includes(d.getDay())) {
-        nextLessonDate = d.toISOString().split('T')[0];
-        break;
+  let isRealLesson = false;
+  let nextRealLessonId = '';
+  let nextRealLessonStatus = '';
+  let nextRealLessonTime = '';
+
+  if (nextRealLesson) {
+    nextLessonDate = nextRealLesson.lesson_date;
+    isRealLesson = true;
+    nextRealLessonId = nextRealLesson.id;
+    nextRealLessonStatus = nextRealLesson.status;
+    nextRealLessonTime = nextRealLesson.lesson_time || '';
+  } else {
+    // Calcular próxima data de aula (para exibir materiais futuros no portal do aluno)
+    const DAY_MAP: Record<string, number> = {
+      dom: 0, seg: 1, ter: 2, qua: 3, qui: 4, sex: 5, 'sáb': 6, sab: 6,
+    };
+    const scheduleStr = (student.schedule || '').toLowerCase();
+    const scheduledWeekDays: number[] = [];
+    Object.entries(DAY_MAP).forEach(([key, val]) => {
+      if (scheduleStr.includes(key)) scheduledWeekDays.push(val);
+    });
+
+    if (scheduledWeekDays.length > 0) {
+      for (let i = 0; i <= 14; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() + i);
+        if (scheduledWeekDays.includes(d.getDay())) {
+          nextLessonDate = d.toISOString().split('T')[0];
+          break;
+        }
       }
     }
   }
@@ -160,25 +182,25 @@ export default async function AlunoDashboard() {
 
           {/* ── PRÓXIMA AULA ─────────────────────────────── */}
           {nextLessonDate && (
-            <div className="glass p-6 rounded-2xl border border-emerald-500/30 relative overflow-hidden">
+            <div className={`glass p-6 rounded-2xl relative overflow-hidden border ${isRealLesson && nextRealLessonStatus === 'justified' ? 'border-amber-500/30' : 'border-emerald-500/30'}`}>
               <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2" />
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
                   <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
                     <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                    Próxima Aula
+                    {isRealLesson ? 'Aula Agendada' : 'Próxima Aula (Projeção)'}
                   </p>
                   <h3 className="text-xl font-bold text-foreground">
                     {new Date(nextLessonDate + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
                   </h3>
-                  {student.schedule && (
+                  {(nextRealLessonTime || student.schedule) && (
                     <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5" />
-                      {student.schedule}
+                      {nextRealLessonTime ? `Horário: ${nextRealLessonTime}` : student.schedule}
                     </p>
                   )}
                 </div>
-                {student.meeting_link && (
+                {student.meeting_link && nextRealLessonStatus !== 'justified' && (
                   <a
                     href={student.meeting_link}
                     target="_blank"
@@ -190,6 +212,17 @@ export default async function AlunoDashboard() {
                   </a>
                 )}
               </div>
+
+              {/* Ações do Aluno (Confirmar / Cancelar) */}
+              {isRealLesson && (
+                <LessonActions
+                  logId={nextRealLessonId}
+                  lessonDate={nextLessonDate}
+                  lessonTime={nextRealLessonTime}
+                  status={nextRealLessonStatus}
+                />
+              )}
+
 
               {/* Materiais da próxima aula */}
               {nextLessonMaterials.length > 0 ? (

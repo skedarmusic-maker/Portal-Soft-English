@@ -114,3 +114,92 @@ export async function deleteAttendance(logId: string, studentId: string) {
 
   return { success: true };
 }
+
+export async function confirmLessonByStudent(logId: string) {
+  const { data: log, error: fetchError } = await supabase
+    .from('attendance_logs')
+    .select('*, students(id)')
+    .eq('id', logId)
+    .single();
+
+  if (fetchError || !log) {
+    console.error('Erro ao buscar aula:', fetchError);
+    return { error: 'Aula não encontrada' };
+  }
+
+  const { error } = await supabase
+    .from('attendance_logs')
+    .update({
+      status: 'present',
+      content: log.content ? `${log.content} (Confirmado pelo Aluno)` : 'Aula Confirmada pelo Aluno'
+    })
+    .eq('id', logId);
+
+  if (error) {
+    console.error('Erro ao confirmar aula:', error);
+    return { error: 'Erro ao confirmar presença' };
+  }
+
+  // Sincronizar com Google Agenda
+  await syncEvent(logId);
+
+  revalidatePath('/aluno');
+  revalidatePath(`/students/${log.students.id}`);
+  revalidatePath('/calendar');
+  revalidatePath('/');
+
+  return { success: true };
+}
+
+export async function cancelLessonByStudent(logId: string) {
+  const { data: log, error: fetchError } = await supabase
+    .from('attendance_logs')
+    .select('*, students(id)')
+    .eq('id', logId)
+    .single();
+
+  if (fetchError || !log) {
+    console.error('Erro ao buscar aula:', fetchError);
+    return { error: 'Aula não encontrada' };
+  }
+
+  // Verificar antecedência de 1 hora
+  const lessonDate = log.lesson_date;
+  const lessonTime = log.lesson_time || '14:00';
+  const lessonDateTime = new Date(`${lessonDate}T${lessonTime}:00`);
+  const now = new Date();
+
+  // Calcular diferença em milissegundos
+  const diffMs = lessonDateTime.getTime() - now.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+
+  if (diffHours < 1) {
+    return { 
+      error: 'As aulas só podem ser desmarcadas com no mínimo 1 hora de antecedência para garantir o direito de remarcação.' 
+    };
+  }
+
+  const { error } = await supabase
+    .from('attendance_logs')
+    .update({
+      status: 'justified',
+      content: log.content ? `${log.content} (Desmarcado pelo Aluno)` : 'Desmarcado pelo Aluno'
+    })
+    .eq('id', logId);
+
+  if (error) {
+    console.error('Erro ao desmarcar aula:', error);
+    return { error: 'Erro ao desmarcar aula' };
+  }
+
+  // Sincronizar com Google Agenda
+  await syncEvent(logId);
+
+  revalidatePath('/aluno');
+  revalidatePath(`/students/${log.students.id}`);
+  revalidatePath('/calendar');
+  revalidatePath('/');
+
+  return { success: true };
+}
+
